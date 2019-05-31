@@ -24,4 +24,38 @@ class GitHubRepoViewModel(private val app: Application) : AndroidViewModel(app) 
 
     private suspend fun nuke()= repository.nuke()
 
+    fun retrieveRepo(user:String)=viewModelScope.launch {
+
+        /**
+         * Primero se borra la tabla de repos
+         **/
+        this@GitHubRepoViewModel.nuke()
+
+        /**
+         * Obtiene el objeto Response de la consulta a la API
+         **/
+        val response=repository.retrieveReposAsync(user).await()
+
+        /**
+         * Evalua y decide dependiendo del estado de la respuesta obtenida
+         **/
+        if(response.isSuccessful) with(response){
+
+            //Inserta toda la lista en la base de datos
+            this.body()?.forEach {
+                this@GitHubRepoViewModel.insert(it)
+            }
+
+        }else with(response){
+            when(this.code()){
+                //Aqui pueden evaluarse todos los codigos HTTP
+                404->{
+                    //Muestra un estado de error en caso no encuentre el usuario
+                    Toast.makeText(app, "Usuario no encontrado", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+
 }
